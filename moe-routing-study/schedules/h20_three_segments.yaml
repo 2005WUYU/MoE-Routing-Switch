@@ -1,0 +1,16 @@
+segments:
+  A:
+    resume: false
+    planned_start_step: 0
+    end_step: 255
+    final_analysis: false
+  B:
+    resume: true
+    planned_start_step: 255
+    end_step: 511
+    final_analysis: false
+  C:
+    resume: true
+    planned_start_step: 511
+    end_step: 512
+    final_analysis: true

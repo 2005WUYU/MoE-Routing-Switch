@@ -1,0 +1,209 @@
+{
+  "scope": "Analytical toy models and numerical/unit checks only; no LLM pretraining was run.",
+  "seed": 20260905,
+  "grid_points": 1048576,
+  "python": "3.13.5",
+  "numpy": "2.3.5",
+  "test_count": 20,
+  "passed": 20,
+  "tests": [
+    {
+      "name": "independent_reference",
+      "passed": true,
+      "details": {
+        "max_error": 4.440892098500626e-16
+      }
+    },
+    {
+      "name": "exact_energy_decomposition",
+      "passed": true,
+      "details": {
+        "S": 0.062287069693549336,
+        "J": 0.20127292295319074,
+        "C": 0.0014287002178893058,
+        "total": 0.26641739308251866,
+        "error": 2.168404344971009e-17
+      }
+    },
+    {
+      "name": "mutation_tautology_is_insufficient",
+      "passed": true,
+      "details": {
+        "reconstruction_error": 2.220446049250313e-16,
+        "independent_reference_error": 0.25000000000000044
+      }
+    },
+    {
+      "name": "signed_margin_not_resorted_gap",
+      "passed": true,
+      "details": {
+        "sorted_margin_before": 0.1,
+        "sorted_margin_after": 0.1,
+        "fixed_pair_margin_after": -0.1
+      }
+    },
+    {
+      "name": "identical_experts_gate_mass_condition",
+      "passed": true,
+      "details": {
+        "normalized_J": 0.0,
+        "unnormalized_J": 0.3308669842559478
+      }
+    },
+    {
+      "name": "additive_shared_cancellation",
+      "passed": true,
+      "details": {
+        "max_error": 7.771561172376096e-16
+      }
+    },
+    {
+      "name": "hard_boundary_square_root_law",
+      "passed": true,
+      "details": {
+        "slopes": {
+          "switch_probability": 1.0000000000000004,
+          "route_rms": 0.5000000000000003,
+          "smooth_rms": 1.0000000000000007
+        },
+        "max_J_error": 0.0
+      }
+    },
+    {
+      "name": "cross_term_exact_uniform_case",
+      "passed": true,
+      "details": {
+        "expected_C": "-alpha^2",
+        "expected_total": "2*alpha-alpha^2"
+      }
+    },
+    {
+      "name": "one_sided_flux_coefficient",
+      "passed": true,
+      "details": {
+        "actual_probability_coefficient": 0.5,
+        "one_sided_coefficient": 0.5,
+        "incorrect_absolute_velocity_coefficient": 1.0
+      }
+    },
+    {
+      "name": "finite_probe_zero_switch_interval",
+      "passed": true,
+      "details": {
+        "rate_at_alpha_0_01": 0.0,
+        "rate_at_alpha_0_3": 0.25,
+        "first_positive_crossing": 0.2
+      }
+    },
+    {
+      "name": "relu_support_change_is_continuous",
+      "passed": true,
+      "details": {
+        "rms_slope": 1.5000000873649688,
+        "max_relative_quadrature_error": 9.5367431640625e-07,
+        "tolerance": 3.814697265625e-06
+      }
+    },
+    {
+      "name": "upstream_jump_contaminates_local_remainder",
+      "passed": true,
+      "details": {
+        "layer2_local_S": 0.0625,
+        "layer2_local_J": 0.0,
+        "global_fixed_graph_energy": 0.0,
+        "global_routing_energy": 0.0625
+      }
+    },
+    {
+      "name": "sgd_step_boundary_harm_counterexample",
+      "passed": true,
+      "details": {
+        "branch_gradient": -0.19999999999999982,
+        "alpha": 0.049999999999999954,
+        "fixed_route_risk_change": -0.007500000000000007,
+        "actual_risk_change": 0.002499771119328198,
+        "J": 0.09999847412109375,
+        "expected_fixed_change": -0.0075,
+        "expected_actual_change": 0.0025,
+        "expected_J": 0.1,
+        "quadrature_tolerance": 7.62939453125e-06
+      }
+    },
+    {
+      "name": "expectation_derivative_boundary_term",
+      "passed": true,
+      "details": {
+        "population_derivative_finite_difference": 0.0,
+        "mean_branch_derivative": -0.19999999999999982,
+        "required_boundary_correction": 0.2
+      }
+    },
+    {
+      "name": "finite_batch_sgd_expected_harm",
+      "passed": true,
+      "details": {
+        "batch_size": 16,
+        "batch_gradient_variance": 0.08333333333303017,
+        "expected_actual_risk_change": 0.007708333333314381,
+        "expected_fixed_route_risk_change": -0.002291666666685621,
+        "method": "Moments checked using deterministic quadrature; no stochastic training run."
+      }
+    },
+    {
+      "name": "horvitz_thompson_exact_enumeration",
+      "passed": true,
+      "details": {
+        "population_mean": 2.4,
+        "expected_HT": 2.4000000000000012,
+        "variance_enumerated": 0.6584027777777743,
+        "variance_formula": 0.6584027777777777,
+        "expected_unweighted_zero_filled_mean": 1.8525000000000005
+      }
+    },
+    {
+      "name": "numerical_margin_certificate",
+      "passed": true,
+      "details": {
+        "certified_tokens": 7877,
+        "violations": 0,
+        "max_score_error": 0.05
+      }
+    },
+    {
+      "name": "expert_agreement_exact_sgd_factor",
+      "passed": true,
+      "details": {
+        "contraction_factor": 0.9851804178986993,
+        "formula_error": 8.881784197001252e-16,
+        "Q_before": 7.677964002827852,
+        "Q_after": 7.452081801565535
+      }
+    },
+    {
+      "name": "normalization_alone_does_not_transfer_beta",
+      "passed": true,
+      "details": {
+        "widths": [
+          16,
+          64
+        ],
+        "fixed_c_factors": [
+          0.92,
+          0.92
+        ],
+        "inverse_sqrt_width_c_factors": [
+          0.995,
+          0.99875
+        ]
+      }
+    },
+    {
+      "name": "large_J_zero_task_effect",
+      "passed": true,
+      "details": {
+        "J": 500000.0,
+        "task_loss_difference": 0.0
+      }
+    }
+  ]
+}

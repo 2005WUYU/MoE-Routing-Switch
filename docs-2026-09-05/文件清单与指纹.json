@@ -1,0 +1,92 @@
+{
+  "date": "2026-09-05",
+  "scope": "Research Markdown collection with analytical and CPU numerical checks; no real LLM training performed.",
+  "markdown_count": 9,
+  "numerical_checks": 20,
+  "passed": 20,
+  "input_materials": [
+    {
+      "file": "MoE_微观更新能量_验证框架与实验设计_2026-09-03.md",
+      "bytes": 50022,
+      "sha256": "931b17e17fe7aa65692c1cef60749aacd88db2a0666842d034d3dbe051774753"
+    },
+    {
+      "file": "MoE_muP_硬路由跳变_文献与实验方案_2026-09-03.md",
+      "bytes": 75817,
+      "sha256": "c040daaf5c01b460df9df93235cd2e72cb6bcedd80e6056bf1347b2d28b4de2a"
+    },
+    {
+      "file": "LLM Theory_ MuP 03 - 为什么MoE模型训练起来有难度？MuP视角 _ Echo的技术博客.html",
+      "bytes": 96227,
+      "sha256": "5e481f0cc31734d36a47e211cd094f545f5a61e0b0895d9345234214853bcc3a"
+    }
+  ],
+  "generated_files": [
+    {
+      "file": "00_总览与阅读顺序.md",
+      "bytes": 8004,
+      "sha256": "f5882a9162e4f9d8406c21bfeeab2cc046ab9f1a8c3ab00d888825c798eaf0d9"
+    },
+    {
+      "file": "01_问题拆分与背景材料核对.md",
+      "bytes": 11141,
+      "sha256": "53bd9cf78a217f8080450795cb01dc52a8ce8c0040f34a0af03d68dd20153fbf"
+    },
+    {
+      "file": "02_论文证据与适用范围.md",
+      "bytes": 19717,
+      "sha256": "314b36234ffb0fd811f260cd6793bc5b75844f791b7349e63ded1733b3770330"
+    },
+    {
+      "file": "03_硬路由跳变的严格推导.md",
+      "bytes": 20323,
+      "sha256": "812cc8f37357569887f77aaa5acc7914d589e7fab6199c0c7fc15ec572155e78"
+    },
+    {
+      "file": "04_从跳变到训练稳定与超参迁移.md",
+      "bytes": 20712,
+      "sha256": "a777d1a68c2f1c92ae153736e987e6cd0c1344e98b46bdc6fd5857f6e7777fb8"
+    },
+    {
+      "file": "05_测量与验证方法的可靠性.md",
+      "bytes": 15956,
+      "sha256": "232b20500a18bb47304958d1e7e9f1dc460c7f5c75054ba11be9f2fc063917f5"
+    },
+    {
+      "file": "06_干预方法的推导与比较.md",
+      "bytes": 15425,
+      "sha256": "2fd780a1c4d3c8f81fe4a69370b81b176760487bdb235041412e5aa6d833e415"
+    },
+    {
+      "file": "07_分阶段实验与判定规则.md",
+      "bytes": 16661,
+      "sha256": "b1c02f915edae18a7b50fc638274b32b3ae80143f9091844a50fbdc03bc9107e"
+    },
+    {
+      "file": "08_已运行数值检验与复现说明.md",
+      "bytes": 7439,
+      "sha256": "e8a5f27b56d0e288538de890308761af9454a8f2a6a7b8f28b9b1c48abd96da6"
+    },
+    {
+      "file": "数值结果/hard_boundary_scan.csv",
+      "bytes": 1308,
+      "sha256": "331bee964a99f51269d5642eddbdc7e2e843758d81dfd79ee4e9585afb6ba3d1"
+    },
+    {
+      "file": "数值结果/relu_boundary_scan.csv",
+      "bytes": 928,
+      "sha256": "b0286e70ed6c0f72761224c6b3a1bbaabaac987cd15502c5c5cea657d2156998"
+    },
+    {
+      "file": "数值结果/results.json",
+      "bytes": 5490,
+      "sha256": "e28fd3a3cb9fc07b946127b1c9077bcb1d7a57b458c8ab66faa0012afcb68460"
+    },
+    {
+      "file": "验证代码/verify_moe.py",
+      "bytes": 15049,
+      "sha256": "bbd056c273fb6429b1bb83e38d047118e0c00ad90992d418c829a38c308afa94"
+    }
+  ],
+  "note": "The manifest excludes its own hash. Original input files are not included or overwritten."
+}

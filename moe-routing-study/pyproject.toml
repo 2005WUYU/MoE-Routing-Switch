@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moe-routing-study"
+version = "0.1.0"
+description = "Paired measurements of real optimizer updates in hard Top-K MoE"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.9", "numpy>=1.26", "PyYAML>=6", "matplotlib>=3.8"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+data = ["datasets>=3", "transformers>=4.51", "huggingface-hub>=0.30"]
+
+[project.scripts]
+moe-train = "moe_study.train:main"
+moe-measure = "moe_study.measure:main"
+moe-report = "moe_study.report:main"
+moe-prepare-data = "moe_study.data:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

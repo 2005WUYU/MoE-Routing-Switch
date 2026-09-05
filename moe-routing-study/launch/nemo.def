@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/nemo:25.11.01
+
+%post
+    python -m pip install --no-cache-dir PyYAML matplotlib datasets
+
+%environment
+    export PYTHONUNBUFFERED=1
+
+%labels
+    Project moe-routing-study
+    Framework NeMo-25.11.01_Bridge-0.2.0_Core-0.15_TE-2.9

@@ -1,0 +1,55 @@
+experiment:
+  name: qwen3_real_optimizer_update
+  model_source: /path/to/Qwen3-30B-A3B
+  training_mode: full_parameter_language_modeling
+  seed: 20260905
+  total_steps: 512
+training:
+  sequence_length: 2048
+  global_sequences_per_step: 128
+  optimizer: adamw
+  learning_rate: 1.0e-5
+  warmup_steps: 32
+  schedule_after_warmup: constant
+  betas: [0.9, 0.95]
+  epsilon: 1.0e-8
+  weight_decay: 0.1
+  grad_clip_norm: 1.0
+  load_balance_coefficient: 0.001
+  load_balance_reduction: sequence_then_layer_then_global_batch_mean
+  matrix_dtype: bfloat16
+  master_parameter_dtype: float32
+  gradient_accumulation_dtype: float32
+  router_dtype: float32
+  recompute: full_uniform_one_layer
+data:
+  dataset: HuggingFaceFW/fineweb-edu
+  subset: sample-10BT
+  revision: main
+  train_tokens: 200000000
+  measurement_sequences: 1024
+  measurement_split_percent: 5
+  root: /path/to/moe-routing-switch/data
+  packing: document_local_full_train_padded_measurement
+measurement:
+  layer_selection: all_moe_layers
+  large_steps: [64, 128, 256, 512]
+  large_sequences: 1024
+  consecutive_windows: [[97, 128], [481, 512]]
+  window_sequences: 64
+  window_subset: first_64
+  local_outputs: [execution, fp32_reference]
+  scalar_reduction_dtype: float64
+  recompute_gates_on_old_support: true
+  full_network_loss_comparison: true
+  interpolation_update: [511, 512]
+  alphas: [0.0, 0.015625, 0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0]
+  interpolation_parameters: fp32_master
+  interpolation_forward: fp32_ieee
+  single_layer_interventions: [1, 24, 48]
+  random_direction_layer: 24
+  random_direction_repeats: 4
+  fp64_sample_tokens_per_layer: 4
+  bootstrap_repeats: 2000
+  bootstrap_seed: 20260906
+  confidence: 0.95

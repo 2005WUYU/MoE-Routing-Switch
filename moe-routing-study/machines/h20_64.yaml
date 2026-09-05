@@ -1,0 +1,22 @@
+machine:
+  name: h20_64
+  backend: megatron
+  nodes: 8
+  gpus_per_node: 8
+  partition: YOUR_PARTITION
+  walltime_per_job: "02:30:00"
+  normal_exit_reserve_minutes: 30
+  automatic_requeue: false
+  tensor_parallel: 1
+  pipeline_parallel: 1
+  context_parallel: 1
+  expert_parallel: 8
+  expert_tensor_parallel: 1
+  microbatch_sequences_per_gpu: 1
+  gradient_accumulation: 2
+  cpu_memory_per_node_gib: 768
+  project_root: /path/to/moe-routing-switch
+  runtime_image: /path/to/moe-routing-switch/environment/nemo-25.11.01.sif
+  source_model_read_only: true
+  persistent_checkpoint_generations: 1
+  simultaneous_checkpoint_generations_during_save: 2

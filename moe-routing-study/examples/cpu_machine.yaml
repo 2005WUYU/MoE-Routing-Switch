@@ -1,0 +1,13 @@
+machine:
+  name: mac_cpu_development
+  backend: cpu_development
+  cpu_threads: 1
+  nodes: 1
+  gpus_per_node: 1
+  tensor_parallel: 1
+  pipeline_parallel: 1
+  context_parallel: 1
+  expert_parallel: 1
+  microbatch_sequences_per_gpu: 1
+  gradient_accumulation: 4
+  project_root: .

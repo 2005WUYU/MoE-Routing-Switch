@@ -1,0 +1,4 @@
+segments:
+  A: {resume: false, planned_start_step: 0, end_step: 3, final_analysis: false}
+  B: {resume: true, planned_start_step: 3, end_step: 4, final_analysis: true}
+  ALL: {resume: false, planned_start_step: 0, end_step: 4, final_analysis: true}

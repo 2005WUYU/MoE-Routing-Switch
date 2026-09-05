@@ -1,0 +1,11 @@
+.DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+outputs/
+checkpoints/
+*.sif
+*.safetensors
+.local/
+/集群具体情况.tar.gz
