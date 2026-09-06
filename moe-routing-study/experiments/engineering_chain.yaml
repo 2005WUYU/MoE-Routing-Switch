@@ -1,0 +1,17 @@
+# The engineering criterion was selected by the user: routing cancels the gain
+# from the continuous part of the SAME real update. Counts are an explicit first
+# allocation; achieved resolution is calculated from the collected data.
+criterion: cancel_continuous_gain
+model_layers: 48
+task_execution_repeats: 4
+direction:
+  sequences: 256
+  layers: [1, 24, 48]
+  execution_repeats: 2
+  gaussian_pairs: 8
+  seed: 20260907
+statistics:
+  confidence: 0.95
+  bootstrap_repeats: 2000
+  seed: 20260907
+  design_power: 0.8

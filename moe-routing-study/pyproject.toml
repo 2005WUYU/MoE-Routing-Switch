@@ -19,6 +19,8 @@ moe-measure = "moe_study.measure:main"
 moe-report = "moe_study.report:main"
 moe-prepare-data = "moe_study.data:main"
 moe-causal = "moe_study.causal:main"
+moe-engineering = "moe_study.engineering:main"
+moe-engineering-report = "moe_study.engineering_report:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

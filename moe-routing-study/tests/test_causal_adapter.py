@@ -10,6 +10,7 @@ from torch.nn import functional as F
 from moe_study.adapters.distributed_reference import ShardedSparseReference
 from moe_study.adapters.megatron_qwen import MegatronEvaluation
 from moe_study.causal_measure import CausalMeasurement, RNGSnapshot
+from moe_study.engineering_measure import EngineeringMeasurement
 from moe_study.measure import batch
 from moe_study.reference.network_fp32 import QwenConfig, QwenReference
 from moe_study.train import development_samples
@@ -61,8 +62,8 @@ class NativeModel(nn.Module):
             layer.mlp = NativeMoE()
         self.output_layer = NativeHead(8, 16, bias=False)
 
-    def forward(self, input_ids, position_ids, attention_mask, labels):
-        hidden = self.embedding(input_ids).transpose(0, 1)
+    def forward(self, input_ids, position_ids, attention_mask, labels, decoder_input=None):
+        hidden = self.embedding(input_ids).transpose(0, 1) if decoder_input is None else decoder_input
         for layer in self.decoder.layers:
             hidden = hidden + layer.mlp(layer.pre_mlp_layernorm(hidden))[0]
         logits = self.output_layer(hidden)[0].transpose(0, 1)
@@ -116,6 +117,23 @@ def _ep_worker(rank, rendezvous, output):
                     - full(**batch(sample, "cpu"), supports=supports).losses.double()).reshape(-1)
     pair.measure_new(sharded)
     np.testing.assert_allclose(pair.network.arrays()[2]["V_1"], expected.numpy(), atol=2e-6, rtol=0)
+    protocol = {"task_execution_repeats": 2,
+                "statistics": {"bootstrap_repeats": 200, "seed": 19, "confidence": .95, "design_power": .8},
+                "direction": {"layers": [1, 2], "sequences": 2, "execution_repeats": 2, "gaussian_pairs": 2, "seed": 19}}
+    engineering = EngineeringMeasurement([sample], [], output, "engineering_ep", RNGSnapshot.capture(),
+                                         protocol=protocol, announce=False)
+    engineering.capture_old(sharded)
+    with torch.no_grad():
+        sharded.layers[0].mlp.gate.weight.mul_(-1)
+    def gather(value):
+        pieces = [None, None] if rank == 0 else None
+        dist.gather_object(value, pieces, dst=0)
+        return pieces
+
+    engineering.measure_new(sharded, gather)
+    row = next(iter(engineering.directions[1].rows.values()))
+    assert row["columns"]["specificity"].shape == (2, 2)
+    assert np.max(np.abs(row["columns"]["suffix_vs_full"])) < 1e-5
     dist.destroy_process_group()
 
 

@@ -16,7 +16,8 @@ from moe_study.reference.expert_fp32 import ieee_fp32
 from moe_study.state import record_code
 
 
-def run(config, args):
+def run(config, args, measurement_factory=CausalMeasurement, report_writer=write_causal_report,
+        full_dataset_forwards=12, protocol_metadata=None):
     from megatron.bridge.data.utils import get_dataset_provider
     from megatron.bridge.training.config import runtime_config_update
     from megatron.bridge.training.setup import setup
@@ -61,18 +62,18 @@ def run(config, args):
     order, diagnostic = ordered_measurement_indices(data.index, args.sequences, args.diagnostic_sequences, data.length)
     samples = [data[index] for index in order[rank::world]]
     engines = ["bf16_execution", "fp32_reference"]
-    pairs = [CausalMeasurement(samples, diagnostic, args.output, engine, rng, "cuda", args.logit_block_size, rank == 0)
+    pairs = [measurement_factory(samples, diagnostic, args.output, engine, rng, "cuda", args.logit_block_size, rank == 0)
              for engine in engines]
     groups = gather({"rank": rank, "ep": dist.get_process_group_ranks(ep),
                      "dense": dist.get_process_group_ranks(dense), "expert_dp": dist.get_process_group_ranks(expert_dp)})
     if rank == 0:
         (args.output / "run.json").write_text(json.dumps({"purpose": "One real update with repeated route counterfactuals",
             "resumed_step": step - 1, "requested_step": step, "checkpoint_source": str(args.checkpoint),
-            "engines": engines, "full_dataset_forwards": 12, "sequence_order": order,
+            "engines": engines, "full_dataset_forwards": full_dataset_forwards, "sequence_order": order,
             "diagnostic_sequences": diagnostic, "config": config.expanded(), "process_groups": groups,
             "torch_version": torch.__version__, "code": record_code(args.output),
-            "old_support": "first N0 in each engine, reused for both F1 repeats",
-            "new_order_per_sequence": ["N1_1", "F1_1", "F1_2", "N1_2"]}, indent=2))
+            "protocol": protocol_metadata,
+            "old_support": "first N0 in each engine, reused for all F1 repeats"}, indent=2))
     evaluation = MegatronEvaluation(raw_model, ep)
     master = MasterUpdate(raw_model, optimizer)
     pairs[0].capture_old(evaluation)
@@ -123,19 +124,19 @@ def run(config, args):
             "native_skipped_update": skipped, "grad_norm_before_clip": grad_norm,
             "train_seconds": time.perf_counter() - train_started, "expert_tokens": load_counts.cpu().tolist()}, indent=2))
     master.save_new_endpoint(args.output / "new_master_shards", dense, expert_dp)
-    pairs[0].measure_new(evaluation)
+    pairs[0].measure_new(evaluation, gather)
     pairs[0].write(config.experiment["measurement"], gather)
     with rng.replay(), ieee_fp32("cuda"):
         reference = create_reference(architecture, ep)
         load_reference_master(reference, master, 1, dense, expert_dp)
-        pairs[1].measure_new(reference)
+        pairs[1].measure_new(reference, gather)
     pairs[1].write(config.experiment["measurement"], gather)
     resources = gather({"rank": rank, "peak_allocated_bytes": torch.cuda.max_memory_allocated(),
                         "peak_reserved_bytes": torch.cuda.max_memory_reserved()})
     if rank == 0:
-        write_causal_report(args.output, engines)
+        report_writer(args.output, engines)
         (args.output / "completion.json").write_text(json.dumps({"final_step": step,
-            "native_skipped_update": skipped, "engines": engines, "full_dataset_forwards": 12,
+            "native_skipped_update": skipped, "engines": engines, "full_dataset_forwards": full_dataset_forwards,
             "elapsed_seconds": time.perf_counter() - started, "resources": resources,
             "new_endpoint": "new_master_shards", "old_endpoint": str(args.checkpoint),
             "new_endpoint_scope": "FP32 model master shards; no new optimizer checkpoint"}, indent=2))

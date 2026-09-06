@@ -202,7 +202,7 @@ class CausalMeasurement:
         return {"J_local_reference": torch.stack(values).numpy(),
                 "new_reference_vs_execution_energy": torch.stack(errors).numpy()}
 
-    def measure_new(self, model):
+    def measure_new(self, model, gather=lambda value: [value]):
         for index, sample in enumerate(self.samples):
             old = self.old.pop(sample["sequence"])
             # The same A0 from the first N0 is used in both counterfactual repeats.

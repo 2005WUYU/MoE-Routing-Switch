@@ -23,7 +23,8 @@ def ordered_measurement_indices(index, count, diagnostic_count, length):
     return diagnostic + [i for i in range(count) if i not in selected], diagnostic
 
 
-def run_cpu(config, args):
+def run_cpu(config, args, measurement_factory=CausalMeasurement, report_writer=write_causal_report,
+            full_dataset_forwards=12, protocol_metadata=None):
     """Exercise the same repeated-forward controller on a saved small CPU model."""
     from moe_study.reference.network_fp32 import QwenConfig, QwenReference
     from moe_study.state import CPUCheckpoint, snapshot_parameters
@@ -44,7 +45,7 @@ def run_cpu(config, args):
                                   seed + 2, "development-measurement")
     diagnostic = [sample["sequence"] for sample in samples[:args.diagnostic_sequences]]
     engines = ["cpu_execution", "cpu_reference"]
-    pairs = [CausalMeasurement(samples, diagnostic, args.output, engine, rng, "cpu", args.logit_block_size)
+    pairs = [measurement_factory(samples, diagnostic, args.output, engine, rng, "cpu", args.logit_block_size)
              for engine in engines]
     pairs[0].capture_old(model)
     pairs[1].capture_old(reference)
@@ -63,9 +64,9 @@ def run_cpu(config, args):
         pair.write(config.experiment["measurement"])
     (args.output / "run.json").write_text(json.dumps({"purpose": "CPU software development, not H20 evidence",
         "resumed_step": step - 1, "final_step": step, "training": record, "engines": engines,
-        "full_dataset_forwards": 12, "checkpoint_source": str(args.checkpoint),
+        "full_dataset_forwards": full_dataset_forwards, "protocol": protocol_metadata, "checkpoint_source": str(args.checkpoint),
         "config": config.expanded()}, indent=2))
-    write_causal_report(args.output, engines)
+    report_writer(args.output, engines)
 
 
 def main():

@@ -1,0 +1,14 @@
+criterion: cancel_continuous_gain
+model_layers: 3
+task_execution_repeats: 3
+direction:
+  sequences: 2
+  layers: [1, 2, 3]
+  execution_repeats: 2
+  gaussian_pairs: 3
+  seed: 20260907
+statistics:
+  confidence: 0.95
+  bootstrap_repeats: 200
+  seed: 20260907
+  design_power: 0.8

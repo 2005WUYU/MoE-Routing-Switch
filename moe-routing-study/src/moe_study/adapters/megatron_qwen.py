@@ -202,11 +202,11 @@ class MegatronEvaluation:
             losses = self.model(input_ids=tokens, position_ids=positions, attention_mask=None, labels=labels)
         return NetworkOutput(losses, losses.new_zeros(()), {number: ids.cpu().to(torch.int32) for number, ids in chosen.items()})
 
-    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None):
+    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None, diagnostic_layers=None, return_logits=True):
         """Observe the real gating call; perform no expert replay inside this forward.
 
         TP=PP=1 in this experiment, so the output head exposes the full vocabulary.
-        All conditions copy logits with the same hook, before loss computation.
+        When requested, all conditions copy logits with the same output hook.
         """
         forced, chosen, scores, residuals, captured_logits = supports or {}, {}, {}, {}, []
         with ExitStack() as hooks:
@@ -236,7 +236,7 @@ class MegatronEvaluation:
                     return probabilities, mapping
 
                 hooks.callback(router.register_forward_hook(choose).remove)
-                if diagnostic is not None:
+                if diagnostic is not None and (diagnostic_layers is None or number in diagnostic_layers):
                     decoder = self.model.decoder.layers[number - 1]
 
                     def before_norm(module, inputs, number=number):
@@ -252,11 +252,29 @@ class MegatronEvaluation:
             def head_output(module, inputs, result):
                 captured_logits.append(result[0].detach().transpose(0, 1).contiguous().cpu())
 
-            hooks.callback(self.model.output_layer.register_forward_hook(head_output).remove)
+            if return_logits:
+                hooks.callback(self.model.output_layer.register_forward_hook(head_output).remove)
             positions = torch.arange(tokens.shape[-1], device=tokens.device)[None].expand_as(tokens)
             losses = self.model(input_ids=tokens, position_ids=positions, attention_mask=None, labels=labels)
         return NetworkOutput(losses.detach().cpu(), losses.new_zeros(()).cpu(),
-                             {number: ids.cpu().to(torch.int32) for number, ids in chosen.items()}, captured_logits[0])
+                             {number: ids.cpu().to(torch.int32) for number, ids in chosen.items()},
+                             captured_logits[0] if return_logits else None)
+
+    def causal_suffix(self, layer_number, hidden, tokens, labels, valid):
+        """Core 0.15 eval path iterates decoder.layers; retain original layer IDs.
+
+        decoder_input bypasses embedding while preserving positions/RoPE. No
+        training parameter is changed. The original layer list is restored on return.
+        """
+        decoder = self.model.decoder
+        layers = decoder.layers
+        with ExitStack() as context:
+            context.callback(setattr, decoder, "layers", layers)
+            decoder.layers = torch.nn.ModuleList(list(layers)[layer_number:])
+            positions = torch.arange(tokens.shape[-1], device=tokens.device)[None].expand_as(tokens)
+            losses = self.model(input_ids=tokens, position_ids=positions, attention_mask=None, labels=labels,
+                                decoder_input=hidden.reshape(-1, 1, hidden.shape[-1]))
+        return NetworkOutput(losses.detach().cpu(), losses.new_zeros(()).cpu(), {})
 
 
 def run_megatron(config, segment_name, output):

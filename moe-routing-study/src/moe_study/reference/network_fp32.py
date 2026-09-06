@@ -168,5 +168,28 @@ class QwenReference(nn.Module):
         auxiliary = torch.stack(balance).mean() if balance else hidden.new_zeros(())
         return NetworkOutput(losses, auxiliary, selected, logits.detach().cpu() if return_logits else None)
 
-    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None):
-        return self(tokens, labels, valid, supports=supports, diagnostic=diagnostic, return_logits=True)
+    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None, diagnostic_layers=None, return_logits=True):
+        def observe(number, *values):
+            if diagnostic_layers is None or number in diagnostic_layers:
+                diagnostic(number, *values)
+        return self(tokens, labels, valid, supports=supports,
+                    diagnostic=observe if diagnostic is not None else None, return_logits=return_logits)
+
+    def causal_suffix(self, layer_number, hidden, tokens, labels, valid):
+        """Continue after a specified layer from one supplied residual stream.
+
+        This gives every direction exactly the same prefix, rather than rerunning
+        a potentially different prefix for each injection. All suffix routes are natural.
+        """
+        hidden = hidden.reshape(*tokens.shape, self.config.hidden_size)
+        selected = {}
+        for number, layer in enumerate(self.layers[layer_number:], start=layer_number + 1):
+            hidden = hidden + layer.self_attn(layer.input_layernorm(hidden))
+            router_input = layer.post_attention_layernorm(hidden).reshape(-1, self.config.hidden_size)
+            scores = F.linear(router_input.float(), layer.mlp.router_weight.float())
+            support = select_support(scores, layer.mlp.k)
+            hidden = hidden + layer.mlp.execution_route(router_input, support).reshape_as(hidden)
+            selected[number] = support.detach().cpu().to(torch.int32)
+        logits = self.lm_head(self.norm(hidden))
+        losses = F.cross_entropy(logits.float().reshape(-1, self.config.vocab_size), labels.reshape(-1), reduction="none")
+        return NetworkOutput(losses.detach().cpu(), losses.new_zeros(()).cpu(), selected)
