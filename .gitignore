@@ -9,3 +9,5 @@ checkpoints/
 *.safetensors
 .local/
 /集群具体情况.tar.gz
+/qwen3_real_optimizer_update_analysis_*.tar.zst
+/moe-routing-study/MoE_H20_结果复算与论证_2026-09-06/

@@ -128,6 +128,7 @@ class NetworkOutput:
     losses: Tensor
     balance_loss: Tensor
     supports: dict[int, Tensor]
+    logits: Tensor | None = None
 
 
 class QwenReference(nn.Module):
@@ -139,7 +140,8 @@ class QwenReference(nn.Module):
         self.norm = RMSNorm(config.hidden_size, config.rms_norm_eps)
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-    def forward(self, tokens, labels, valid, supports=None, observer=None, intervention=None, balance_coefficient=0.0):
+    def forward(self, tokens, labels, valid, supports=None, observer=None, intervention=None, balance_coefficient=0.0,
+                diagnostic=None, return_logits=False):
         forced = supports or {}
         hidden = self.embed_tokens(tokens)
         selected, balance = {}, []
@@ -150,6 +152,9 @@ class QwenReference(nn.Module):
             support = forced[number].to(hidden.device) if number in forced else select_support(scores, layer.mlp.k)
             output = layer.mlp.execution_route(router_input, support)
             selected[number] = support.detach().cpu().to(torch.int32)
+            if diagnostic is not None:
+                diagnostic(number, layer.mlp, hidden.reshape(-1, self.config.hidden_size),
+                           router_input, scores, support, output)
             if observer is not None:
                 observer(number, layer.mlp, router_input, scores, support, output)
             if intervention is not None:
@@ -161,4 +166,7 @@ class QwenReference(nn.Module):
         logits = self.lm_head(self.norm(hidden))
         losses = F.cross_entropy(logits.float().reshape(-1, self.config.vocab_size), labels.reshape(-1), reduction="none").reshape_as(labels)
         auxiliary = torch.stack(balance).mean() if balance else hidden.new_zeros(())
-        return NetworkOutput(losses, auxiliary, selected)
+        return NetworkOutput(losses, auxiliary, selected, logits.detach().cpu() if return_logits else None)
+
+    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None):
+        return self(tokens, labels, valid, supports=supports, diagnostic=diagnostic, return_logits=True)

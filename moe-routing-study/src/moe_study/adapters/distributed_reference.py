@@ -105,10 +105,25 @@ class MasterUpdate:
             piece = self.slices[parameter]
             new = piece.optimizer._get_main_param_and_optimizer_states(parameter)["param"]
             old = piece.old.to(parameter.device)
-            full.view(-1)[piece.start:piece.end] = old + alpha * (new - old)
+            # Endpoints are the stored masters themselves, without subtract/add rounding.
+            value = old if alpha == 0 else new if alpha == 1 else old + alpha * (new - old)
+            full.view(-1)[piece.start:piece.end] = value
         group = expert_data_group if ".mlp.experts." in name else dense_group
         dist.all_reduce(full, group=group)
         return full
+
+    def save_new_endpoint(self, destination, dense_group, expert_data_group):
+        """Persist only uniquely owned FP32 shards, not a second Adam checkpoint."""
+        destination.mkdir(parents=True, exist_ok=True)
+        names = {parameter: name for name, parameter in self.model.named_parameters()}
+        parameters = {}
+        for parameter, piece in self.slices.items():
+            master = piece.optimizer._get_main_param_and_optimizer_states(parameter)["param"]
+            parameters[names[parameter]] = {"shape": list(parameter.shape), "execution_dtype": str(parameter.dtype),
+                "start": piece.start, "end": piece.end, "master": master.detach().cpu().clone()}
+        torch.save({"rank": dist.get_rank(), "dense_group": dist.get_process_group_ranks(dense_group),
+                    "expert_data_group": dist.get_process_group_ranks(expert_data_group), "parameters": parameters},
+                   destination / f"rank_{dist.get_rank():05d}.pt")
 
 
 def split_qkv(packed, config):

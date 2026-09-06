@@ -18,6 +18,7 @@ moe-train = "moe_study.train:main"
 moe-measure = "moe_study.measure:main"
 moe-report = "moe_study.report:main"
 moe-prepare-data = "moe_study.data:main"
+moe-causal = "moe_study.causal:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -28,6 +28,7 @@ def build_bridge_config(config, segment_name, output):
     @dataclass
     class PackedDatasetProvider(DatasetProvider):
         root: str = ""
+        dataloader_type: str = "single"
 
         def build_datasets(self, context):
             return TokenDataset(self.root, "train"), None, None
@@ -70,7 +71,7 @@ def build_bridge_config(config, segment_name, output):
     cfg.model.moe_token_dispatcher_type = "alltoall"
     cfg.model.moe_grouped_gemm = True
     cfg.model.moe_router_fusion = False
-    cfg.model.moe_permute_fusion = True
+    cfg.model.moe_permute_fusion = False
     cfg.model.moe_input_jitter_eps = None
     cfg.model.moe_z_loss_coeff = None
     cfg.optimizer.adam_beta1, cfg.optimizer.adam_beta2 = training["betas"]
@@ -99,6 +100,7 @@ def build_bridge_config(config, segment_name, output):
     cfg.train.check_weight_hash_across_dp_replicas_interval = None
     cfg.checkpoint.save = str(output / "checkpoints")
     cfg.checkpoint.load = str(output / "checkpoints") if segment["resume"] else None
+    cfg.checkpoint.save_interval = None
     cfg.checkpoint.most_recent_k = 1
     cfg.checkpoint.async_save = False
     cfg.checkpoint.save_optim = cfg.checkpoint.load_optim = True
@@ -160,6 +162,13 @@ class MegatronEvaluation:
     def eval(self):
         self.model.eval()
 
+    @property
+    def training(self):
+        return self.model.training
+
+    def train(self, mode=True):
+        self.model.train(mode)
+
     def __call__(self, tokens, labels, valid, supports=None, observer=None, intervention=None):
         forced, chosen, scores_by_layer = supports or {}, {}, {}
         with ExitStack() as hooks:
@@ -192,6 +201,62 @@ class MegatronEvaluation:
             positions = torch.arange(tokens.shape[-1], device=tokens.device)[None].expand_as(tokens)
             losses = self.model(input_ids=tokens, position_ids=positions, attention_mask=None, labels=labels)
         return NetworkOutput(losses, losses.new_zeros(()), {number: ids.cpu().to(torch.int32) for number, ids in chosen.items()})
+
+    def causal_forward(self, tokens, labels, valid, supports=None, diagnostic=None):
+        """Observe the real gating call; perform no expert replay inside this forward.
+
+        TP=PP=1 in this experiment, so the output head exposes the full vocabulary.
+        All conditions copy logits with the same hook, before loss computation.
+        """
+        forced, chosen, scores, residuals, captured_logits = supports or {}, {}, {}, {}, []
+        with ExitStack() as hooks:
+            for number, layer in self.layers.items():
+                router = layer.module.router
+                gating = router.gating
+
+                def observed_gating(hidden, number=number, gating=gating):
+                    result = gating(hidden)
+                    scores[number] = result.reshape(-1, result.shape[-1])
+                    return result
+
+                router.gating = observed_gating
+                hooks.callback(setattr, router, "gating", gating)
+
+                def choose(router, inputs, result, number=number):
+                    probabilities, mapping = result
+                    if number in forced:
+                        ids = forced[number].to(tokens.device).long()
+                        # Match Core's descending-score selected softmax order. The
+                        # captured routing map stores IDs in expert order, not score order.
+                        order = scores[number].gather(-1, ids).argsort(-1, descending=True)
+                        ids = ids.gather(-1, order)
+                        probabilities = torch.zeros_like(scores[number]).scatter_(-1, ids, selected_gates(scores[number], ids))
+                        mapping = torch.zeros_like(mapping).scatter_(-1, ids, True)
+                    chosen[number] = mapping.nonzero(as_tuple=True)[1].reshape(-1, router.topk)
+                    return probabilities, mapping
+
+                hooks.callback(router.register_forward_hook(choose).remove)
+                if diagnostic is not None:
+                    decoder = self.model.decoder.layers[number - 1]
+
+                    def before_norm(module, inputs, number=number):
+                        residuals[number] = inputs[0].detach().reshape(-1, inputs[0].shape[-1]).cpu().clone()
+
+                    def after_moe(module, inputs, result, number=number, layer=layer):
+                        hidden = inputs[0].reshape(-1, inputs[0].shape[-1])
+                        diagnostic(number, layer, residuals[number], hidden, scores[number], chosen[number], result[0].reshape_as(hidden))
+
+                    hooks.callback(decoder.pre_mlp_layernorm.register_forward_pre_hook(before_norm).remove)
+                    hooks.callback(layer.module.register_forward_hook(after_moe).remove)
+
+            def head_output(module, inputs, result):
+                captured_logits.append(result[0].detach().transpose(0, 1).contiguous().cpu())
+
+            hooks.callback(self.model.output_layer.register_forward_hook(head_output).remove)
+            positions = torch.arange(tokens.shape[-1], device=tokens.device)[None].expand_as(tokens)
+            losses = self.model(input_ids=tokens, position_ids=positions, attention_mask=None, labels=labels)
+        return NetworkOutput(losses.detach().cpu(), losses.new_zeros(()).cpu(),
+                             {number: ids.cpu().to(torch.int32) for number, ids in chosen.items()}, captured_logits[0])
 
 
 def run_megatron(config, segment_name, output):

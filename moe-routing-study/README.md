@@ -2,6 +2,8 @@
 
 按上级目录 `MoE_H20_真实更新测量实验方案_2026-09-05.md` 实现的 Mac 开发工程。正式配置是 Qwen3-30B-A3B、512 次全参数 AdamW 更新、全部 48 层的配对测量；Mac 示例使用小尺寸网络执行真实更新以验证软件。
 
+512 步结果见[公开分析摘要](reports/h20_20260906/README.md)：存在性与首层尺度得到支持，核心工程损害假设尚未得到支持。新增 `python -m moe_study.causal` 从现有检查点接着执行一次更新，完成 12 次测量集前向。集群拉取后的具体命令见[一次更新补测运行说明](docs/causal_run.md)，比较定义见[工程假设与下一步因果比较](docs/工程假设与下一步因果比较_2026-09-06.md)。
+
 ## 在当前 Mac 上使用
 
 项目虚拟环境 `.venv/` 已安装 PyTorch 2.9.0、NumPy、PyYAML、pytest 和 Matplotlib，已可运行：
@@ -47,6 +49,7 @@ moe-measure experiments/h20_qwen_real_update.yaml
 | `statistics.py` | 文档组配对 bootstrap、条件幅度、尾部与可分辨斜率 |
 | `data.py` | 有限流式分词、文档划分、uint32 打包、mask 与游标索引 |
 | `measure.py`、`scan.py` | 更新两侧捕获、三条网络路径、局部数值参考、α 与干预 |
+| `causal.py`、`causal_measure.py`、`adapters/causal_train.py` | 从检查点接着走一步，独立重复、捕获后重放与任务效应报告 |
 | `reference/` | SwiGLU 及保留 QK Norm、独立 head_dim 的完整 FP32 Qwen 参考 |
 | `train.py`、`state.py` | CPU 开发训练、完整状态恢复、命令入口 |
 | `adapters/` | Bridge/Core 训练接口、生产 dispatch、EP 参考与主参数分片 |
